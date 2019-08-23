@@ -100,7 +100,7 @@ func (store *Store) New(req *http.Request, name string) (*sessions.Session, erro
 
 // Save should persist session to the underlying store implementation.
 func (store *Store) Save(req *http.Request, w http.ResponseWriter, session *sessions.Session) error {
-	ctx, cancel := context.WithTimeout(context.Background(), *time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), store.getTimeout())
 	defer cancel()
 
 	err := store.save(ctx, session.Name(), session)
@@ -120,6 +120,10 @@ func (store *Store) Save(req *http.Request, w http.ResponseWriter, session *sess
 	}
 
 	return nil
+}
+
+func (store *Store) getTimeout() time.Duration {
+	return time.Duration(store.saveTimeout) * time.Second
 }
 
 func (store *Store) canSetCookie(session *sessions.Session) bool {
