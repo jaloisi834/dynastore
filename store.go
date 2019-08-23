@@ -63,6 +63,7 @@ type Store struct {
 	options        sessions.Options
 	printf         func(format string, args ...interface{})
 	refreshCookies bool
+	saveTimeout    int
 }
 
 // Get should return a cached session.
@@ -99,7 +100,10 @@ func (store *Store) New(req *http.Request, name string) (*sessions.Session, erro
 
 // Save should persist session to the underlying store implementation.
 func (store *Store) Save(req *http.Request, w http.ResponseWriter, session *sessions.Session) error {
-	err := store.save(req.Context(), session.Name(), session)
+	ctx, cancel := context.WithTimeout(context.Background(), *time.Second)
+	defer cancel()
+
+	err := store.save(ctx, session.Name(), session)
 	if err != nil {
 		return err
 	}
@@ -107,7 +111,7 @@ func (store *Store) Save(req *http.Request, w http.ResponseWriter, session *sess
 	if session.Options != nil && session.Options.MaxAge < 0 {
 		cookie := newCookie(session, session.Name(), "")
 		http.SetCookie(w, cookie)
-		return store.delete(req.Context(), session.ID)
+		return store.delete(ctx, session.ID)
 	}
 
 	if store.canSetCookie(session) {
@@ -149,6 +153,10 @@ func New(opts ...Option) (*Store, error) {
 
 	for _, opt := range opts {
 		opt(store)
+	}
+
+	if store.saveTimeout <= 0 {
+		store.saveTimeout = 1
 	}
 
 	if store.ddb == nil {
