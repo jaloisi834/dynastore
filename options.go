@@ -120,3 +120,10 @@ func RefreshCookies() Option {
 		s.refreshCookies = true
 	}
 }
+
+// SaveTimeout sets the timeout (in seconds) used in the context passed to save
+func SaveTimeout(t int) Option {
+	return func(s *Store) {
+		s.saveTimeout = t
+	}
+}
